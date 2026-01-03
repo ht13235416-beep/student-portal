@@ -7,7 +7,8 @@ from psycopg2.extras import RealDictCursor
 
 
 app = Flask(__name__)
-ensure_db_ready()
+if os.environ.get("RENDER"):
+    ensure_db_ready()
 app.secret_key = os.environ.get("SECRET_KEY", "fallback")
 
 def get_db():
@@ -250,30 +251,36 @@ def enroll_student():
 
     for course_id in course_ids:
         try:
-            cur.execute("""
-    INSERT INTO enrollments (student_id, course_id)
-    VALUES (%s, %s)
-    RETURNING id
-""", (student_id, course_id))
-
-enrollment_id = cur.fetchone()["id"]
-
-
+            # Insert enrollment and RETURN id
             cur.execute(
                 """
-                INSERT INTO grades (enrollment_id)
-                VALUES (%s)
+                INSERT INTO enrollments (student_id, course_id)
+                VALUES (%s, %s)
+                RETURNING id
+                """,
+                (student_id, course_id)
+            )
+
+            enrollment_id = cur.fetchone()["id"]
+
+            # Create grade row
+            cur.execute(
+                """
+                INSERT INTO grades (enrollment_id, status)
+                VALUES (%s, 'draft')
                 """,
                 (enrollment_id,)
             )
 
-        except Exception:
+        except Exception as e:
+            db.rollback()
             continue
 
     db.commit()
     db.close()
 
     return redirect(url_for("registrar_dashboard"))
+
 
 
 
