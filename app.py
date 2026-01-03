@@ -6,10 +6,13 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 
+from db_init import ensure_db_ready
+
+ensure_db_ready()
+
 app = Flask(__name__)
-if os.environ.get("RENDER"):
-    ensure_db_ready()
 app.secret_key = os.environ.get("SECRET_KEY", "fallback")
+
 
 def get_db():
     database_url = os.environ.get("DATABASE_URL")
