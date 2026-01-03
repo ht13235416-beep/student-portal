@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Student Dashboard</h2>
+<h3>Cumulative GPA: {{ gpa }}</h3>
+
+<table>
+    <tr>
+        <th>Course Code</th>
+        <th>Course Name</th>
+        <th>Credits</th>
+        <th>Grade</th>
+    </tr>
+
+    {% for row in rows %}
+    <tr>
+        <td>{{ row.course_code }}</td>
+        <td>{{ row.course_name }}</td>
+        <td>{{ row.credit_hours }}</td>
+        <td>
+            {% if row.status == 'locked' %}
+                {{ row.letter_grade }}
+            {% else %}
+                <em>Pending</em>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}

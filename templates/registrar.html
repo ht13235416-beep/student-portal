@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Registrar Dashboard</h2>
+<h2>Enroll Student in Courses</h2>
+
+<form method="post" action="{{ url_for('enroll_student') }}">
+
+    <label>Student</label><br>
+    <select name="student_id" required>
+        {% for s in students %}
+            <option value="{{ s.id }}">{{ s.full_name }}</option>
+        {% endfor %}
+    </select>
+
+    <br><br>
+
+    <label>Courses</label><br>
+    {% for c in courses %}
+        <input type="checkbox" name="course_ids" value="{{ c.id }}">
+        {{ c.course_code }} - {{ c.course_name }}<br>
+    {% endfor %}
+
+    <br>
+    <button type="submit">Enroll</button>
+</form>
+
+<hr>
+
+<table>
+    <tr>
+        <th>Student</th>
+        <th>Course</th>
+        <th>Grade</th>
+        <th>Status</th>
+        <th>Action</th>
+    </tr>
+
+    {% for row in rows %}
+    <tr>
+        <td>{{ row.student_name }}</td>
+        <td>{{ row.course_code }}</td>
+        <td>{{ row.letter_grade }}</td>
+        <td>{{ row.status }}</td>
+        <td>
+            {% if row.status == "submitted" %}
+            <form method="post" style="display:inline">
+                <input type="hidden" name="grade_id" value="{{ row.grade_id }}">
+                <button name="action" value="approve">Approve</button>
+                <button name="action" value="reject" class="danger">Reject</button>
+            </form>
+            {% elif row.status == "approved" %}
+            <form method="post" style="display:inline">
+                <input type="hidden" name="grade_id" value="{{ row.grade_id }}">
+                <button name="action" value="lock">Lock</button>
+            </form>
+            {% else %}
+                —
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}
