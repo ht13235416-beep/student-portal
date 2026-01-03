@@ -10,7 +10,7 @@ if not DATABASE_URL:
 conn = psycopg2.connect(DATABASE_URL)
 cur = conn.cursor()
 
-# ---------------- USERS ----------------
+# ---------- USERS ----------
 users = [
     ("registrar", generate_password_hash("admin123"), "registrar"),
     ("teacher1", generate_password_hash("teach123"), "teacher"),
@@ -27,11 +27,11 @@ cur.executemany(
     users
 )
 
-# ---------------- USER MAP ----------------
+# ---------- USER MAP ----------
 cur.execute("SELECT id, username FROM users")
 user_map = {username: uid for uid, username in cur.fetchall()}
 
-# ---------------- STUDENTS ----------------
+# ---------- STUDENTS ----------
 cur.executemany(
     """
     INSERT INTO students (id, student_number, full_name)
@@ -44,7 +44,7 @@ cur.executemany(
     ]
 )
 
-# ---------------- TEACHERS ----------------
+# ---------- TEACHER ----------
 cur.execute(
     """
     INSERT INTO teachers (id, full_name, department)
@@ -54,7 +54,7 @@ cur.execute(
     (user_map["teacher1"], "Dr. Solomon Bekele", "Computer Science")
 )
 
-# ---------------- COURSES ----------------
+# ---------- COURSES ----------
 cur.executemany(
     """
     INSERT INTO courses (course_code, course_name, credit_hours, teacher_id)
@@ -67,14 +67,13 @@ cur.executemany(
     ]
 )
 
-# ---------------- COURSE IDS ----------------
+# ---------- ENROLLMENTS ----------
 cur.execute("SELECT id FROM courses WHERE course_code = 'CS101'")
 cs101 = cur.fetchone()[0]
 
 cur.execute("SELECT id FROM courses WHERE course_code = 'CS102'")
 cs102 = cur.fetchone()[0]
 
-# ---------------- ENROLLMENTS ----------------
 enrollments = [
     (user_map["student1"], cs101),
     (user_map["student1"], cs102),
@@ -85,18 +84,19 @@ cur.executemany(
     """
     INSERT INTO enrollments (student_id, course_id)
     VALUES (%s, %s)
-    ON CONFLICT (student_id, course_id) DO NOTHING
+    ON CONFLICT DO NOTHING
     """,
     enrollments
 )
 
-# ---------------- GRADES ----------------
+# ---------- GRADES ----------
 cur.execute("SELECT id FROM enrollments")
 for (eid,) in cur.fetchall():
     cur.execute(
         """
         INSERT INTO grades (enrollment_id, status, entered_at)
         VALUES (%s, 'draft', %s)
+        ON CONFLICT DO NOTHING
         """,
         (eid, datetime.utcnow())
     )
@@ -105,4 +105,5 @@ conn.commit()
 cur.close()
 conn.close()
 
-print("🌱 PostgreSQL seed data inserted successfully.")
+print("✅ PostgreSQL seed data inserted successfully.")
+

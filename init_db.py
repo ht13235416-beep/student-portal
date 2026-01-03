@@ -1,3 +1,4 @@
+from seed_data import seed_data
 import os
 import psycopg2
 
@@ -29,6 +30,11 @@ CREATE TABLE IF NOT EXISTS students (
         REFERENCES users(id)
         ON DELETE CASCADE
 )
+""")
+# 🔧 MIGRATION FIX (FOR EXISTING DATABASES)
+cur.execute("""
+ALTER TABLE students
+ADD COLUMN IF NOT EXISTS student_number TEXT UNIQUE
 """)
 
 # TEACHERS
@@ -132,6 +138,8 @@ BEFORE UPDATE ON grades
 FOR EACH ROW
 EXECUTE FUNCTION prevent_illegal_grade_update();
 """)
+# 🌱 SEED DATA (SAFE TO RUN MULTIPLE TIMES)
+seed_data()
 
 conn.commit()
 cur.close()
