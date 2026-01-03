@@ -1,16 +1,23 @@
 from flask import Flask, render_template, request, session, redirect, url_for
-import sqlite3
 from werkzeug.security import check_password_hash
+import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
+
 
 app = Flask(__name__)
-app.secret_key = "dev_secret_key"
+app.secret_key = os.environ.get("SECRET_KEY", "fallback")
 
 def get_db():
-    conn = sqlite3.connect("database.db")
-    conn.row_factory = sqlite3.Row
-    return conn
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is not set")
 
-@app.route("/", methods=["GET", "POST"])
+    return psycopg2.connect(
+        database_url,
+        cursor_factory=RealDictCursor
+    )
+
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -20,7 +27,7 @@ def login():
         db = get_db()
         cur = db.cursor()
         cur.execute(
-            "SELECT id, password_hash, role FROM users WHERE username=?",
+            "SELECT id, password_hash, role FROM users WHERE username=%s",
             (username,)
         )
         user = cur.fetchone()
@@ -57,15 +64,15 @@ def teacher_dashboard():
         if action == "save":
             cur.execute("""
                 UPDATE grades
-                SET letter_grade=?, entered_by=?, status='draft'
-                WHERE id=? AND status='draft'
+                SET letter_grade=%s, entered_by=%s, status='draft'
+                WHERE id=%s AND status='draft'
             """, (letter_grade, teacher_id, grade_id))
 
         elif action == "submit":
             cur.execute("""
                 UPDATE grades
-                SET letter_grade=?, status='submitted', entered_by=?
-                WHERE id=? AND status='draft'
+                SET letter_grade=%s, status='submitted', entered_by=%s
+                WHERE id=%s AND status='draft'
             """, (letter_grade, teacher_id, grade_id))
 
         db.commit()
@@ -83,7 +90,7 @@ def teacher_dashboard():
         JOIN enrollments ON grades.enrollment_id = enrollments.id
         JOIN students ON enrollments.student_id = students.id
         JOIN courses ON enrollments.course_id = courses.id
-        WHERE courses.teacher_id = ?
+        WHERE courses.teacher_id = %s
         ORDER BY courses.course_code, students.full_name
     """, (teacher_id,))
 
@@ -102,7 +109,7 @@ def student_dashboard():
 
     # map logged-in user → student
     cur.execute(
-        "SELECT id FROM students WHERE id = ?",
+        "SELECT id FROM students WHERE id = %s",
         (session["user_id"],)
     )
     student = cur.fetchone()
@@ -125,7 +132,7 @@ def student_dashboard():
         FROM enrollments
         JOIN courses ON enrollments.course_id = courses.id
         LEFT JOIN grades ON grades.enrollment_id = enrollments.id
-        WHERE enrollments.student_id = ?
+        WHERE enrollments.student_id = %s
         ORDER BY courses.course_code
         """,
         (student_id,)
@@ -173,22 +180,22 @@ def registrar_dashboard():
         if action == "approve":
             cur.execute("""
                 UPDATE grades
-                SET status='approved', approved_by=?, approved_at=CURRENT_TIMESTAMP
-                WHERE id=? AND status='submitted'
+                SET status='approved', approved_by=%s, approved_at=CURRENT_TIMESTAMP
+                WHERE id=%s AND status='submitted'
             """, (registrar_id, grade_id))
 
         elif action == "reject":
             cur.execute("""
                 UPDATE grades
                 SET status='draft'
-                WHERE id=? AND status='submitted'
+                WHERE id=%s AND status='submitted'
             """, (grade_id,))
 
         elif action == "lock":
             cur.execute("""
                 UPDATE grades
                 SET status='locked'
-                WHERE id=? AND status='approved'
+                WHERE id=%s AND status='approved'
             """, (grade_id,))
 
         db.commit()
@@ -243,17 +250,25 @@ def enroll_student():
         try:
             cur.execute("""
                 INSERT INTO enrollments (student_id, course_id)
-                VALUES (?, ?)
+                VALUES (%s, %s)
             """, (student_id, course_id))
 
-            enrollment_id = cur.lastrowid
+           INSERT INTO enrollments (student_id, course_id)
+VALUES (%s, %s)
+RETURNING id
+
+enrollment_id = cur.fetchone()["id"]
+
 
             cur.execute("""
                 INSERT INTO grades (enrollment_id)
-                VALUES (?)
+                VALUES (%s)
             """, (enrollment_id,))
 
-        except sqlite3.IntegrityError:
+        except psycopg2.IntegrityError:
+    db.rollback()
+    continue
+
             continue
 
     db.commit()
