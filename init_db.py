@@ -1,4 +1,3 @@
-from seed_data import seed_data
 import os
 import psycopg2
 
@@ -19,11 +18,10 @@ CREATE TABLE IF NOT EXISTS users (
 )
 """)
 
-# STUDENTS
+# STUDENTS (BASE TABLE)
 cur.execute("""
 CREATE TABLE IF NOT EXISTS students (
     id INTEGER PRIMARY KEY,
-    student_number TEXT UNIQUE NOT NULL,
     full_name TEXT NOT NULL,
     CONSTRAINT fk_student_user
         FOREIGN KEY (id)
@@ -31,10 +29,21 @@ CREATE TABLE IF NOT EXISTS students (
         ON DELETE CASCADE
 )
 """)
-# 🔧 MIGRATION FIX (FOR EXISTING DATABASES)
+
+# 🔥 MIGRATION: add student_number if missing
 cur.execute("""
-ALTER TABLE students
-ADD COLUMN IF NOT EXISTS student_number TEXT UNIQUE
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name='students'
+        AND column_name='student_number'
+    ) THEN
+        ALTER TABLE students
+        ADD COLUMN student_number TEXT UNIQUE;
+    END IF;
+END $$;
 """)
 
 # TEACHERS
@@ -114,7 +123,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
 )
 """)
 
-# 🔥 POSTGRES TRIGGER (STATUS PROTECTION)
+# STATUS PROTECTION TRIGGER
 cur.execute("""
 CREATE OR REPLACE FUNCTION prevent_illegal_grade_update()
 RETURNS trigger AS $$
@@ -138,12 +147,16 @@ BEFORE UPDATE ON grades
 FOR EACH ROW
 EXECUTE FUNCTION prevent_illegal_grade_update();
 """)
-# 🌱 SEED DATA (SAFE TO RUN MULTIPLE TIMES)
+
+# ✅ COMMIT SCHEMA FIRST
+conn.commit()
+
+# 🌱 SEED DATA (AFTER SCHEMA IS GUARANTEED)
+from seed_data import seed_data
 seed_data()
 
-conn.commit()
 cur.close()
 conn.close()
 
 print("PostgreSQL database initialized successfully.")
-import seed_data
+
