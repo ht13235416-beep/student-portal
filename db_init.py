@@ -1,5 +1,5 @@
-import psycopg2
 import os
+import psycopg2
 from seed_data import seed_data
 
 def ensure_db_ready():
@@ -12,7 +12,7 @@ def ensure_db_ready():
         id SERIAL PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
-        role TEXT CHECK (role IN ('student','teacher','registrar')) NOT NULL
+        role TEXT CHECK (role IN ('student', 'teacher', 'registrar')) NOT NULL
     );
     """)
 
@@ -24,29 +24,29 @@ def ensure_db_ready():
     );
     """)
 
-    # TEACHERS
-cur.execute("""
-CREATE TABLE IF NOT EXISTS teachers (
-    id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    full_name TEXT NOT NULL
-);
-""")
+    # TEACHERS (BASE)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS teachers (
+        id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        full_name TEXT NOT NULL
+    );
+    """)
 
-# 🔥 MIGRATION — ADD department IF MISSING
-cur.execute("""
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM information_schema.columns
-        WHERE table_name='teachers'
-        AND column_name='department'
-    ) THEN
-        ALTER TABLE teachers
-        ADD COLUMN department TEXT;
-    END IF;
-END $$;
-""")
+    # 🔥 MIGRATION — ADD department IF MISSING
+    cur.execute("""
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name='teachers'
+            AND column_name='department'
+        ) THEN
+            ALTER TABLE teachers
+            ADD COLUMN department TEXT;
+        END IF;
+    END $$;
+    """)
 
     # COURSES
     cur.execute("""
@@ -82,11 +82,13 @@ END $$;
     );
     """)
 
-    # ✅ SEED USING SAME CURSOR
+    conn.commit()
+
+    # 🌱 SEED AFTER SCHEMA IS SAFE
     seed_data(cur)
 
     conn.commit()
     cur.close()
     conn.close()
 
-    print("✅ Database schema + seed completed")
+    print("✅ Database ready")
