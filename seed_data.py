@@ -1,8 +1,7 @@
 from werkzeug.security import generate_password_hash
 
-
 def seed_data(cur):
-    # ---------- USERS ----------
+    # USERS
     users = [
         ("registrar", generate_password_hash("admin123"), "registrar"),
         ("teacher1", generate_password_hash("teach123"), "teacher"),
@@ -16,11 +15,10 @@ def seed_data(cur):
         ON CONFLICT (username) DO NOTHING
     """, users)
 
-    # ---------- USER MAP ----------
     cur.execute("SELECT id, username FROM users")
-    user_map = {username: uid for uid, username in cur.fetchall()}
+    user_map = {u: i for i, u in cur.fetchall()}
 
-    # ---------- STUDENTS ----------
+    # STUDENTS
     cur.executemany("""
         INSERT INTO students (id, full_name)
         VALUES (%s, %s)
@@ -30,18 +28,14 @@ def seed_data(cur):
         (user_map["student2"], "Liya Kebede"),
     ])
 
-    # ---------- TEACHER ----------
+    # TEACHER
     cur.execute("""
         INSERT INTO teachers (id, full_name, department)
         VALUES (%s, %s, %s)
         ON CONFLICT (id) DO NOTHING
-    """, (
-        user_map["teacher1"],
-        "Dr. Solomon Bekele",
-        "Computer Science"
-    ))
+    """, (user_map["teacher1"], "Dr. Solomon Bekele", "Computer Science"))
 
-    # ---------- COURSES ----------
+    # COURSES
     cur.executemany("""
         INSERT INTO courses (course_code, course_name, credit_hours, teacher_id)
         VALUES (%s, %s, %s, %s)

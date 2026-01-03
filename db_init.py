@@ -6,40 +6,45 @@ def ensure_db_ready():
     conn = psycopg2.connect(os.environ["DATABASE_URL"])
     cur = conn.cursor()
 
-    # ---- TABLES ----
+    # USERS
     cur.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
-        role TEXT NOT NULL
+        role TEXT CHECK (role IN ('student','teacher','registrar')) NOT NULL
     );
     """)
 
+    # STUDENTS
     cur.execute("""
     CREATE TABLE IF NOT EXISTS students (
-        id INTEGER PRIMARY KEY REFERENCES users(id),
+        id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
         full_name TEXT NOT NULL
     );
     """)
 
+    # TEACHERS
     cur.execute("""
     CREATE TABLE IF NOT EXISTS teachers (
-        id INTEGER PRIMARY KEY REFERENCES users(id),
-        full_name TEXT NOT NULL
+        id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        full_name TEXT NOT NULL,
+        department TEXT
     );
     """)
 
+    # COURSES
     cur.execute("""
     CREATE TABLE IF NOT EXISTS courses (
         id SERIAL PRIMARY KEY,
-        course_code TEXT NOT NULL,
+        course_code TEXT UNIQUE NOT NULL,
         course_name TEXT NOT NULL,
         credit_hours INTEGER NOT NULL,
         teacher_id INTEGER REFERENCES teachers(id)
     );
     """)
 
+    # ENROLLMENTS
     cur.execute("""
     CREATE TABLE IF NOT EXISTS enrollments (
         id SERIAL PRIMARY KEY,
@@ -49,6 +54,7 @@ def ensure_db_ready():
     );
     """)
 
+    # GRADES
     cur.execute("""
     CREATE TABLE IF NOT EXISTS grades (
         id SERIAL PRIMARY KEY,
@@ -61,11 +67,11 @@ def ensure_db_ready():
     );
     """)
 
+    # ✅ SEED USING SAME CURSOR
+    seed_data(cur)
+
     conn.commit()
     cur.close()
     conn.close()
 
-    # 🔥 SEED ONLY ONCE
-    seed_data()
-
-
+    print("✅ Database schema + seed completed")
