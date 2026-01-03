@@ -248,33 +248,32 @@ def enroll_student():
 
     for course_id in course_ids:
         try:
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO enrollments (student_id, course_id)
                 VALUES (%s, %s)
-            """, (student_id, course_id))
+                """,
+                (student_id, course_id)
+            )
 
-           INSERT INTO enrollments (student_id, course_id)
-VALUES (%s, %s)
-RETURNING id
+            enrollment_id = cur.fetchone()[0]
 
-enrollment_id = cur.fetchone()["id"]
-
-
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO grades (enrollment_id)
                 VALUES (%s)
-            """, (enrollment_id,))
+                """,
+                (enrollment_id,)
+            )
 
-        except psycopg2.IntegrityError:
-    db.rollback()
-    continue
-
+        except Exception:
             continue
 
     db.commit()
     db.close()
 
     return redirect(url_for("registrar_dashboard"))
+
 
 
 @app.route("/logout")
