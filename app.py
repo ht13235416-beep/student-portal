@@ -1,3 +1,4 @@
+from db_init import ensure_db_ready
 from flask import Flask, render_template, request, session, redirect, url_for
 from werkzeug.security import check_password_hash
 import os
@@ -6,6 +7,7 @@ from psycopg2.extras import RealDictCursor
 
 
 app = Flask(__name__)
+ensure_db_ready()
 app.secret_key = os.environ.get("SECRET_KEY", "fallback")
 
 def get_db():
