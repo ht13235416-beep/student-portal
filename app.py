@@ -250,15 +250,14 @@ def enroll_student():
 
     for course_id in course_ids:
         try:
-            cur.execute(
-                """
-                INSERT INTO enrollments (student_id, course_id)
-                VALUES (%s, %s)
-                """,
-                (student_id, course_id)
-            )
+            cur.execute("""
+    INSERT INTO enrollments (student_id, course_id)
+    VALUES (%s, %s)
+    RETURNING id
+""", (student_id, course_id))
 
-            enrollment_id = cur.fetchone()[0]
+enrollment_id = cur.fetchone()["id"]
+
 
             cur.execute(
                 """
