@@ -138,3 +138,4 @@ cur.close()
 conn.close()
 
 print("PostgreSQL database initialized successfully.")
+import seed_data
