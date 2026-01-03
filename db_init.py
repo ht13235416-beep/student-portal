@@ -25,13 +25,28 @@ def ensure_db_ready():
     """)
 
     # TEACHERS
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS teachers (
-        id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-        full_name TEXT NOT NULL,
-        department TEXT
-    );
-    """)
+cur.execute("""
+CREATE TABLE IF NOT EXISTS teachers (
+    id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    full_name TEXT NOT NULL
+);
+""")
+
+# 🔥 MIGRATION — ADD department IF MISSING
+cur.execute("""
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name='teachers'
+        AND column_name='department'
+    ) THEN
+        ALTER TABLE teachers
+        ADD COLUMN department TEXT;
+    END IF;
+END $$;
+""")
 
     # COURSES
     cur.execute("""
