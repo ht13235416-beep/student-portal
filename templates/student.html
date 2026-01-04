@@ -3,6 +3,11 @@
 {% block content %}
 
 <h2>Student Dashboard</h2>
+
+{% if rows %}
+    <h3>Student: {{ rows[0].student_name }}</h3>
+{% endif %}
+
 <h3>Cumulative GPA: {{ gpa }}</h3>
 
 <table>

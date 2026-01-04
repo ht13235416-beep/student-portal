@@ -130,16 +130,18 @@ def student_dashboard():
     cur.execute(
         """
         SELECT
-            courses.course_code,
-            courses.course_name,
-            courses.credit_hours,
-            grades.letter_grade,
-            grades.status
-        FROM enrollments
-        JOIN courses ON enrollments.course_id = courses.id
-        LEFT JOIN grades ON grades.enrollment_id = enrollments.id
-        WHERE enrollments.student_id = %s
-        ORDER BY courses.course_code
+    students.full_name AS student_name,
+    courses.course_code,
+    courses.course_name,
+    courses.credit_hours,
+    grades.letter_grade,
+    grades.status
+FROM enrollments
+JOIN students ON enrollments.student_id = students.id
+JOIN courses ON enrollments.course_id = courses.id
+LEFT JOIN grades ON grades.enrollment_id = enrollments.id
+WHERE enrollments.student_id = %s
+ORDER BY courses.course_code
         """,
         (student_id,)
     )
